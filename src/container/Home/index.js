@@ -9,7 +9,7 @@ const Home = () => {
           <Link to='/linkage'>复杂联动</Link>
         </li>
         <li>
-          <Link to='/layout'>复杂布局</Link>
+          <Link to='/rxjs'>rxjs</Link>
         </li>
       </ul>
     </div>
