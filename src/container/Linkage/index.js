@@ -5,16 +5,22 @@ import {
   FormButtonGroup,
   createFormActions,
   FormEffectHooks,
+  createEffectHook,
   Submit,
   Reset
 } from '@formily/antd' // 或者 @formily/next
 import { Input, Select } from '@formily/antd-components'
 import { merge } from 'rxjs'
+import { combineLatest } from 'rxjs/operators'
 import 'antd/dist/antd.css';
+
+
 
 const { 
   onFieldValueChange$, 
-  onFormSubmitStart$,} = FormEffectHooks;
+  onFormSubmitStart$,
+  onFormMount$
+} = FormEffectHooks;
 
 const useOneToManyEffects = () => {
   const { setFieldState } = createFormActions();
@@ -34,7 +40,7 @@ const useValidator = (name, validator) => {
   })
 }
 
-const useManyToMany = () => {
+const useManyToOne = () => {
   const { setFieldState } = createFormActions();
 
   onFieldValueChange$('bb').subscribe(({ value }) => {
@@ -48,6 +54,36 @@ const useManyToMany = () => {
       state.value = value;
     })
   })
+}
+
+const customEvent$ = createEffectHook('CUSTOM_EVENT')
+const useMultiDepsEffects = () => {
+  const { setFieldState, dispatch } = createFormActions();
+  onFormMount$().subscribe(() => {
+    setTimeout(() => {
+      dispatch('CUSTOM_EVENT', true)
+    }, 3000)
+  })
+
+  onFieldValueChange$('aa')
+    .pipe(combineLatest(customEvent$()))
+    .subscribe((params) => {
+      const [{ value, values }, visible ] = params;
+
+      console.log('value values:', value, values)
+
+      setFieldState('bb', state => {
+        state.visible = visible;
+      })
+
+      setFieldState('cc', state => {
+        state.visible = value;
+
+        if (values[1] && values[1]['data-other-nfo']) {
+          state.value = values[1]['data-other-nfo']
+        }
+      })
+    })
 }
 
 const Linkage = () => {
@@ -108,7 +144,7 @@ const Linkage = () => {
         components={{ Input, Select }}
         effects={() => {
           // eslint-disable-next-line react-hooks/rules-of-hooks
-          useManyToMany();
+          useManyToOne();
         }}
       >
         <Field type='string' name='aa' title='AA' x-component='Input' />
@@ -125,6 +161,38 @@ const Linkage = () => {
         />
         <Field type='string' name='cc' title='CC' x-component='Input' />
 
+      </SchemaForm>
+
+      <h2>多依赖联动</h2>
+      <SchemaForm
+        components={{ Input, Select }}
+        onSubmit={values => {
+          console.log(values)
+        }}
+        effects={() => {
+          // eslint-disable-next-line react-hooks/rules-of-hooks
+          useMultiDepsEffects()
+        }}
+      >
+        <Field
+          type="string"
+          enum={[
+            { label: 'visible', value: true, 'data-other-nfo': '123' },
+            { label: 'hidden', value: false, 'data-other-nfo': '321' }
+          ]}
+          default={false}
+          name="aa"
+          title="AA"
+          x-component="Select"
+        />
+        <Field
+          type="string"
+          name="bb"
+          visible={false}
+          title="BB"
+          x-component="Input"
+        />
+        <Field type="string" name="cc" title="CC" x-component="Input" />
       </SchemaForm>
     </div>
   )
